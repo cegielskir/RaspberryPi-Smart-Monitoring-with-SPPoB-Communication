@@ -80,8 +80,6 @@ class VideoCap:
                     file = open("./movecords/" + self.last_file_path + ".txt", "w+")
                     datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p")
                     out = cv2.VideoWriter("./video/" + datetime.datetime.now().strftime("%I-%M-%S%p") + ".avi", cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 10, (frame_width, frame_height))
-                    print('Stop recording')
-                    print("New video file")
                     self.new_video = True
             
             if do_continue == True:
@@ -92,10 +90,6 @@ class VideoCap:
 		    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 cv2.putText(frame, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"),
 		(10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
-                
-                #now record everything
-                #change to record move xd
-                #print('Start recording')
     
                 if i == 5 and self.video == True and (text == "Motion Detected" or
                                            self.last_move_time + datetime.timedelta(0, 5) > datetime.datetime.now()):
@@ -108,9 +102,7 @@ class VideoCap:
                     out.write(frame)
                     
                 if self.alarm == 1:
-                    #print('alarm on')
                     pass
-                    #send alarm by SPPOB
                 
                 cv2.imshow('Live', frame)
                 #cv2.imshow('gray', gray)
@@ -126,23 +118,17 @@ class VideoCap:
     def get_arguments(self):
         arguments = self.functions[self.func_name][1:]
         if arguments.__len__() != 0:
-            print("Input user defined function arguments :)")
+            print("Input user defined function arguments")
             for arg in arguments:
                 self.args.append(int(input("Please, input " + str(arg) + " parameter value: ")))
 
    
     
     def _motion_detection(self, frame):
-
         text = "No Move"
-        
-        #convert frame to grayscale, and blur it
-        ##frame = imutils.resize(frame, width=500)
-        ##frame = imutils.resize(frame, width=500)
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
-        
-        
         
         if self.first_frame is None:
             self.first_frame = gray
@@ -151,12 +137,6 @@ class VideoCap:
         else:
             self.last_frame = self.first_frame
             self.first_frame = gray
-        
-        
-        
-        #if i == 10:
-            #i = 0
-            #self.first_frame = gray
 	    
         # compute the absolute difference between the current frame and
 	# first frame
@@ -169,24 +149,7 @@ class VideoCap:
         cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		cv2.CHAIN_APPROX_SIMPLE)
         cnts = cnts[0] if imutils.is_cv2() else cnts[1]
- 
-        #print(cnts)
-        
-        #largest = max(map(lambda x: (cv2.contourArea(x)), cnts))
-        
-        #status = 'motion'
     
-        #if cv2.contourArea(cnts[largest]) > 1000:
-        '''for c in cnts:
-            if cv2.contourArea(c) > 500:
-                continue
-            
-            (x,y,w,h) = cv2.boundingRect(cnts[0])
-            (x,y,w,h) = (int(x), int(y), int(w), int(h))
-            box = (x,y,w,h)
-            ok = self.tracker.init(frame,box)
-            status = 'tracking'
-        '''
         max_contour_area = 0
         max_c = 0
         for c in cnts:
@@ -205,7 +168,7 @@ class VideoCap:
         
         if max_contour_area > 0:
             if self.last_move_time + datetime.timedelta(0,5) < datetime.datetime.now():
-                print('Start recording')
+                pass
             self.last_move_time = datetime.datetime.now()
             (x, y, w, h) = cv2.boundingRect(max_c)
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
@@ -213,43 +176,11 @@ class VideoCap:
             x1 = 255*(x)/640
             y1 = 255*(y)/480
             x2 = 255*(x+w)/640
-            y2 = 255*(y+h)/480
-            
-            #print("Move detected in: " +  str(100*(x+w/2)/640) + " "  + str(100*(y+h/2)/480) )
-            
-            
-            
-        '''if status == 'tracking':
-            ok, box = self.tracker.update(frame)
-            
-            if ok:
-                p1 = (int(box[0]), int(box[1]))
-                p2 = (int(box[0] + box[2]),int(box[1] + box[3]))
-                cv2.rectangle(frame,p1,p2,(0,0,255),10)
-        '''
-    
-	# loop over the contours
-        #for c in cnts:
-		# if the contour is too small, ignore it
-         #   if cv2.contourArea(c) < 500:
-          #      continue
- 
-		# compute the bounding box for the contour, draw it on the frame,
-		# and update the text
-          #  (x, y, w, h) = cv2.boundingRect(c)
-           # cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-          #  text = "ALERT !!! BEER IS IN DANGER !!!"
-		
+            y2 = 255*(y+h)/480	
 	
         return (frame, thresh, frame_delta, gray, text, False, x1, y1, x2, y2)
 
 
-
-    """
-    Dictionary of available video effects.
-        @key: function name used in arg_parser
-        @value: list of [class function name, user-defined arguments]
-    """
     functions = {
         'motion-detection' : ['_motion_detection']
     }

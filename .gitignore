@@ -1,1 +1,4 @@
-.idea/
+/idea/
+/video/
+/BackUp/
+/__pycache__/

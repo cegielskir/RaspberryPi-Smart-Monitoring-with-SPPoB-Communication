@@ -9,7 +9,7 @@ from time import sleep
 
 '''
 free chars
-k,4,5,6,7
+k,3,4,5,6,7,8,9,0
 '''
 
 port = serial.Serial("/dev/ttyUSB0", baudrate=19200, timeout=3.0)
@@ -28,25 +28,21 @@ last_file_date = None
 
 
 def initialize(received_packet):
-    print("In init")
     global init
     init = True
     
     
 def video_on(received_packet):
-    print("In video_on")
     global video
     video = 1
     
     
 def alarm_on(received_packet):
-    print("In alarm_on")
     global alarm
     alarm = 1
     
     
 def whole_scope(received_packet):
-    print("In whole_scope")
     global x_min, x_max, y_min, y_max
     x_min = 0
     x_max = 640
@@ -55,7 +51,6 @@ def whole_scope(received_packet):
     
     
 def right_scope(received_packet):
-    print("In rigt_scope")
     global x_min, x_max, y_min, y_max
     x_min = 320
     x_max = 640
@@ -64,7 +59,6 @@ def right_scope(received_packet):
     
     
 def left_scope(received_packet):
-    print("In left_scope")
     global x_min, x_max, y_min, y_max
     x_min = 0
     x_max = 320
@@ -73,7 +67,6 @@ def left_scope(received_packet):
     
     
 def upper_scope(received_packet):
-    print("In upper_scope")
     global x_min, x_max, y_min, y_max
     x_min = 0
     x_max = 640
@@ -82,56 +75,11 @@ def upper_scope(received_packet):
     
     
 def down_scope(received_packet):
-    print("In down_scope")
     global x_min, x_max, y_min, y_max
     x_min = 0
     x_max = 640
     y_min = 240
     y_max = 480
-    
-'''
-def send_coords(received_packet):
-    files = [f for f in listdir('./movecords/')]
-    files = [f for f in files if f[-5] == 'V']
-    
-    files = sorted(files)
-    packet_to_send = []
-    packet_to_send.append(received_packet[0])
-    packet_to_send.append(received_packet[1])
-    packet_to_send.append(received_packet[2])
-    
-    file = open('./movecords/' + files[0])
-    data = file.read()
-    print(data)
-    data = data.split()
-    length = len(data)
-    packet_to_send.append(length)
-    packet_to_send.extend(map(int, data))
-    
-        
-    crc = crc8(packet_to_send[1:])
-    
-    packet_to_send.append(crc)
-    
-    send_byte(packet_to_send)
-'''    
-    
-    
-    
-def send_byte(packet):
-    
-    new_list = []
-    new_list.append(packet[0])
-    for intt in packet[1:]:
-        if intt == 125:
-            new_list.append(125)
-            new_list.append(93)
-        elif intt == 126:
-            new_list.append(125)
-            new_list.append(94)
-        else:new_list.append(intt)
-        
-    port.write(bytes([int(i) for i in new_list]))
     
     
 def start(received_packet):
@@ -146,7 +94,6 @@ def start(received_packet):
     
     
 def quit(received_packet):
-    print("In quit")
     global cam, init, video, alarm, x_min, x_max, y_min, y_max
     cam.kill()
     cam = None
@@ -166,32 +113,14 @@ def set_roi(received_packet):
     x_max  =  int(x_max / 255 * 640)
     y_min  =  int(y_min / 255 * 480)
     y_max  =  int(y_max / 255 * 480)
-    
-    print("X_MIN " + str(x_min))
-    print("X_MAX " + str(x_max))
-    print("Y_MIN " + str(y_min))
-    print("Y_MAX " + str(y_max))
-    
-def delete_sent_cords(received_packet):
-    files = [f for f in listdir('./movecords/')]
-    files = [f for f in files if f[-5] != 'V']
-    for file in files:
-        file_path = os.path.join('./movecords', file)
-        try:
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
-        except Exception as e:
-            print(e)
             
 
-'''
-TODO
-len(str_packet) > 1 byte
-'''
 def switch_fun(str_packet, received_packet):
     
-    if len(received_packet) > 6:
+    if len(received_packet) == 9:
+        print("HERE")
         set_roi(received_packet)
+        send_response(received_packet)
         return
     
     func = {
@@ -208,10 +137,23 @@ def switch_fun(str_packet, received_packet):
         '11100001' : send_cords,
         '11100010' : delete_sent_cords,
         }
-    
+    send_response(received_packet)
     func[str_packet](received_packet)
 
-    
+ 
+def delete_sent_cords(received_packet):
+    files = [f for f in listdir('./movecords/')]
+    files = [f for f in files if f[-5] != 'V']
+    files = sorted(files, reverse=True)
+    files = files[1:]
+    for file in files:
+        file_path = os.path.join('./movecords', file)
+        try:
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+        except Exception as e:
+            print(e)
+            
 
 def send_cords(received_packet):
     files = [f for f in listdir('./movecords/')]
@@ -226,7 +168,6 @@ def send_cords(received_packet):
         file_contest = open('./movecords/' + file)
         os.rename('./movecords/'+ file, './movecords/'+ file[:-5] + "S.txt")
         data = file_contest.read()
-        print(data)
         data = data.split()
         length = len(data)
         packet_to_send.append(length)
@@ -236,14 +177,38 @@ def send_cords(received_packet):
         crc = crc8(packet_to_send[1:])
         
         packet_to_send.append(crc)
-
-        #print(bytes([int(i) for i in new_list]))
         
         send_byte(packet_to_send)
         
         sleep(0.5)
         
+def send_response(received_packet):
+    packet_to_send = received_packet[:3]
+    length = received_packet[3]
+    packet_to_send.append(received_packet[3])
+    for i in range(4, length+4):
+        packet_to_send.append(received_packet[i])
         
+    crc = crc8(packet_to_send[1:])
+    packet_to_send.append(crc)
+    
+    send_byte(packet_to_send)
+    
+
+def send_byte(packet):
+    new_list = []
+    new_list.append(packet[0])
+    for intt in packet[1:]:
+        if intt == 125:
+            new_list.append(125)
+            new_list.append(93)
+        elif intt == 126:
+            new_list.append(125)
+            new_list.append(94)
+        else:new_list.append(intt)
+        
+    port.write(bytes([int(i) for i in new_list]))
+            
         
 
 def receive_packet():
@@ -266,19 +231,9 @@ def receive_packet():
                 received_signal = []
                 received_hex = []
         if received:
-            print(rcv)
-            if index == 0:
-                print("Start received bin data")
-
-            print("It is part number: " + str(index + 1))
             index = index + 1
-            print(bin(ord(rcv))[2:].zfill(8))
-            print(hex(ord(rcv))[2:].zfill(2))
             received_hex.append(int.from_bytes(rcv, byteorder=sys.byteorder))
-            received_signal.append(bin(ord(rcv))[2:].zfill(8))
-         
-        else:
-           print("No data received")
+            received_signal.append(bin(ord(rcv))[2:].zfill(8))       
     
 
 def crc8(data):
@@ -300,7 +255,6 @@ def proccess_packet(packet, received_hex):
     global address
     global cam
     global init
-    print(packet)
     crc_packet = packet[:-1]
     crc_packet = crc_packet[1:]
 
@@ -313,20 +267,9 @@ def proccess_packet(packet, received_hex):
     send_array = []
     for byte in received_hex:
         send_array.append("{0:b}".format(byte).zfill(8))
-        
-    print(str(received_hex))
-    print(bytes([int(i) for i in received_hex]))
-    ##port.write(bytes([int(i) for i in received_hex]))
     
-    print("{0:b}".format(crc))
     crc = crc.to_bytes((crc.bit_length() + 7) // 8, 'big')
 
-    #print(hex(received_hex[5])[2:].zfill(2))
-    
-
-    
-    #print("Address: " + str(address))
-    #print("Packet[1]: " + packet[1])
     if address != packet[1]: return
     
     #for sending
@@ -346,12 +289,7 @@ def proccess_packet(packet, received_hex):
         elif data_as_string == '00000000':
             if cam != None:
                 quit(received_hex)
-                
-    #choose mode
-            
-    #port.write(str.encode(asstring))
-    
-        
+                     
         
 receive_packet()
     

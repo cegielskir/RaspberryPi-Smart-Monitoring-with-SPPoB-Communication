@@ -89,12 +89,14 @@ def start(received_packet):
     if cam != None:
         cam.kill()
     cam = subprocess.Popen(["python3", "record.py", "--fun", "motion-detection", "-x", str(x_min), str(x_max),
-                            "-y", str(y_min), str(y_max), "-v", str(video), "-a", str(alarm)])
+                            "-y", str(y_min), str(y_max), "-v", str(video), "-a", str(alarm), "-d", str(received_packet[1])])
     init = False
     
     
 def quit(received_packet):
     global cam, init, video, alarm, x_min, x_max, y_min, y_max
+    if cam == None:
+        return
     cam.kill()
     cam = None
     init = False
@@ -118,13 +120,12 @@ def set_roi(received_packet):
 def switch_fun(str_packet, received_packet):
     
     if len(received_packet) == 9:
-        print("HERE")
         set_roi(received_packet)
-        send_response(received_packet)
+        send_response_2(received_packet)
         return
     
     func = {
-        '00000001' : initialize,
+        '00000000' : quit,
         '00000100' : video_on,
         '00000101' : alarm_on,
         '00001000' : whole_scope,
@@ -134,10 +135,10 @@ def switch_fun(str_packet, received_packet):
         '00001100' : down_scope,
         '00000000' : quit,
         '00000110' : start,
-        '11100001' : send_cords,
+        '11100001' : send_cords_2,
         '11100010' : delete_sent_cords,
         }
-    send_response(received_packet)
+    send_response_2(received_packet)
     func[str_packet](received_packet)
 
  
@@ -153,65 +154,33 @@ def delete_sent_cords(received_packet):
                 os.unlink(file_path)
         except Exception as e:
             print(e)
-            
+
 
 def send_cords(received_packet):
     files = [f for f in listdir('./movecords/')]
     files = [f for f in files if f[-5] == 'V']
     files = sorted(files, reverse=True)
     for file in files:
-        packet_to_send = []
-        packet_to_send.append(received_packet[0])
-        packet_to_send.append(received_packet[1])
-        packet_to_send.append(received_packet[2])
-        
         file_contest = open('./movecords/' + file)
         os.rename('./movecords/'+ file, './movecords/'+ file[:-5] + "S.txt")
         data = file_contest.read()
         data = data.split()
-        length = len(data)
-        packet_to_send.append(length)
-        packet_to_send.extend(map(int, data))
+        data = list(map(str, data))
         
-            
-        crc = crc8(packet_to_send[1:])
-        
-        packet_to_send.append(crc)
-        
-        send_byte(packet_to_send)
+        subprocess.Popen(["python3", "send_packet.py", str(received_packet[1])] + data)
         
         sleep(0.5)
         
-        
+    
 def send_response(received_packet):
-    packet_to_send = received_packet[:3]
+    data = []
     length = received_packet[3]
-    packet_to_send.append(received_packet[3])
     for i in range(4, length+4):
-        packet_to_send.append(received_packet[i])
-        
-    crc = crc8(packet_to_send[1:])
-    packet_to_send.append(crc)
+        data.append(str(received_packet[i]))
     
-    send_byte(packet_to_send)
-    
-
-def send_byte(packet):
-    new_list = []
-    new_list.append(packet[0])
-    for intt in packet[1:]:
-        if intt == 125:
-            new_list.append(125)
-            new_list.append(93)
-        elif intt == 126:
-            new_list.append(125)
-            new_list.append(94)
-        else:new_list.append(intt)
-        
-    port.write(bytes([int(i) for i in new_list]))
+    subprocess.Popen(["python3", "send_packet.py", str(received_packet[1])] + data)
             
         
-
 def receive_packet():
     index = 0
     
@@ -280,17 +249,9 @@ def proccess_packet(packet, received_hex):
     #TODO encode to dec
     len = packet[3]
     data_as_string = packet[4]
-    print("HERE2")
-    if init == True:
-        switch_fun(data_as_string, received_hex)
-    else:
-        if data_as_string == '00000001':
-            initialize(received_hex)
-            
-        elif data_as_string == '00000000':
-            if cam != None:
-                quit(received_hex)
-                     
+    
+    switch_fun(data_as_string, received_hex)
+                
         
 receive_packet()
     

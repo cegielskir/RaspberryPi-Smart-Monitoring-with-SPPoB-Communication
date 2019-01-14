@@ -18,6 +18,7 @@ parser.add_argument('-v','--video',
                     help="path to video file")
 parser.add_argument('-a','--alarm',
                     help="is alarm on")
+parser.add_argument('-d','--dest', help ="destination address") 
 
 
 def main():
@@ -25,5 +26,6 @@ def main():
     if arguments.x[0] > arguments.x[1] or arguments.y[0] > arguments.y[1]:
         raise AttributeError("First val < Second val!")
 
-    video_cap = VideoCap(arguments.fun, arguments.x[0], arguments.y[0], arguments.x[1], arguments.y[1], arguments.video, arguments.alarm)
+    video_cap = VideoCap(arguments.fun, arguments.x[0], arguments.y[0], arguments.x[1], arguments.y[1], arguments.video, arguments.alarm,
+                         arguments.dest)
     video_cap.run()

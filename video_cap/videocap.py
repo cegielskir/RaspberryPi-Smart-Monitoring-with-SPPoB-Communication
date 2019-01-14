@@ -3,6 +3,7 @@ import cv2
 import imutils
 import datetime
 import time
+import subprocess
 from imutils.video import VideoStream
 import os
 
@@ -11,7 +12,7 @@ _PATH = 'video_cap/resources/trained_models/haarcascade_frontalface_default.xml'
 alarm = None
 
 class VideoCap:
-    def __init__(self, function_name, x_min, y_min, x_max, y_max, video, alarm):
+    def __init__(self, function_name, x_min, y_min, x_max, y_max, video, alarm, dest):
         self.func_name = function_name
         self.fun = getattr(VideoCap, self.functions[function_name][0])
         self.args = []
@@ -34,6 +35,7 @@ class VideoCap:
         self.last_move_time = datetime.datetime.now() - datetime.timedelta(1)
         self.new_video = False
         self.last_file_date = None
+        self.dest = dest
         
             
     def run(self):
@@ -91,7 +93,7 @@ class VideoCap:
                 cv2.putText(frame, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"),
 		(10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
     
-                if i == 5 and self.video == True and (text == "Motion Detected" or
+                if i == 5 and self.video == True and (text == "Move Detected" or
                                            self.last_move_time + datetime.timedelta(0, 5) > datetime.datetime.now()):
                     if x1 > 0:
                         coords = str(int(x1)) + " " + str(int(y1)) + " " + str(int(x2)) + " " + str(int(y2))
@@ -100,9 +102,9 @@ class VideoCap:
                     
                     self.new_video = False
                     out.write(frame)
-                    
-                if self.alarm == 1:
-                    pass
+
+                if self.alarm and i == 5 and text == "Move Detected":
+                    subprocess.Popen(["python3", "send_packet.py", str(self.dest), '65','76','65','82','77' ])
                 
                 cv2.imshow('Live', frame)
                 #cv2.imshow('gray', gray)
